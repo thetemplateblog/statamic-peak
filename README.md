@@ -1,35 +1,164 @@
-# 🇺🇦 [Support Ukraine Now](https://supportukrainenow.org)
+# site.ext
 
-<img class="margin-bottom: 1rem;" src="https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-logo.png?v=3" width="220" alt="Statamic Peak Logo" />
+## Installation instructions
 
-# Start out on top!
+1. run `composer install`
+2. run `php please make:user`
+3. run `npm i` && `npm run watch` (or `npm run dev`)
 
-Peak is your personal development sherpa. It's an opinionated starter kit for all your Statamic sites. It's design agnostic but comes bundled with tools like Tailwind CSS and AlpineJS and a workflow you can use to build anything you want. Peak features a page builder, a rich collection of starter templates, fieldsets, blueprints, SEO functionality, configuration and more to get you started on your clients' site straight away. Peak is easy to extend or edit to fit your clients' website needs and will drastically improve your development speed.
+## Environment file contents
 
-The aim of Peak is to make it easy to start new projects as they often share much of the same principles. Whether you're new to Statamic or a veteran, there will be something interesting in here for you. Please participate and discuss on how to make our websites better.
+### Development
 
-Maintaining Peak demands a lot of my time and it probably saves you a lot. Your sponsoring would mean a great deal to me as it makes it much easier for me to maintain this project and keep improving it. [Sponsor me](https://github.com/sponsors/studio1902).
+```env
+Dump your .env values here with sensitive data removed.
+```
 
-[Read the docs](https://peak.studio1902.nl)
+### Production
 
-![Extendible page builder and long form content with sets.](https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-promo-01.png)
+```env
+Dump your .env values here with sensitive data removed. The following is a production example that uses full static caching:
+APP_NAME='Statamic Peak'
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_URL=
 
-![Generate custom social images and browser appearance configuration and generate favicons.](https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-promo-02.png)
+DEBUGBAR_ENABLED=false
 
-![Professional SEO, per entry and globally.](https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-promo-03.png)
+LOG_CHANNEL=stack
 
-![Configure trackers, add a GPDR compliant cookie banner.](https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-promo-04.png)
+BROADCAST_DRIVER=log
+CACHE_DRIVER=file
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
 
-![Social media integration and 301/302 redirects.](https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-promo-05.png)
+REDIS_HOST=127.0.0.1
+REDIS_DATABASE=
+REDIS_PASSWORD=null
+REDIS_PORT=6379
 
-![And a lot more additional bottles of oxygen.](https://cdn.studio1902.nl/assets/statamic-peak/statamic-peak-promo-06.png)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.postmarkapp.com
+MAIL_PORT=587
+MAIL_ENCRYPTION=tls
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME="${APP_NAME}"
 
-## Contributing
-Contributions and discussions are always welcome, no matter how large or small. Treat each other with respect. Read the [Code of Conduct](https://github.com/studio1902/statamic-peak/blob/main/.github/CODE_OF_CONDUCT.md).
+PUSHER_APP_ID=
+PUSHER_APP_KEY=
+PUSHER_APP_SECRET=
+PUSHER_APP_CLUSTER=mt1
 
-Read more about [how you can contribute](https://peak.studio1902.nl/other/contributing.html) here.
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
 
-## License
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information. Statamic itself is commercial software and has its' own license.
+MIX_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+MIX_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 
-The Peak branding is done by Jouke Zult from [Mistral Merkactivisten](https://mistralmerkactivisten.nl). Thank you so much!
+IMAGE_MANIPULATION_DRIVER=imagick
+
+STATAMIC_LICENSE_KEY=
+STATAMIC_THEME=business
+
+STATAMIC_API_ENABLED=false
+STATAMIC_REVISIONS_ENABLED=false
+
+STATAMIC_GIT_ENABLED=true
+STATAMIC_GIT_PUSH=true
+STATAMIC_GIT_DISPATCH_DELAY=5
+
+STATAMIC_STATIC_CACHING_STRATEGY=full
+SAVE_CACHED_IMAGES=true
+STATAMIC_STACHE_WATCHER=false
+STATAMIC_CACHE_TAGS_ENABLED=true
+
+#STATAMIC_CUSTOM_CMS_NAME=
+STATAMIC_CUSTOM_LOGO_OUTSIDE_URL='/visuals/client-logo.svg'
+#STATAMIC_CUSTOM_LOGO_NAV_URL=
+#STATAMIC_CUSTOM_FAVICON_URL=
+#STATAMIC_CUSTOM_CSS_URL=
+```
+
+## NGINX config
+
+Add the following to your NGINX config __inside the server block__ enable static resource caching:
+```
+expires $expires;
+```
+
+And this __outside the server block__:
+```
+map $sent_http_content_type $expires {
+    default    off;
+    text/css    max;
+    ~image/    max;
+    application/javascript    max;
+    application/octet-stream    max;
+}
+```
+
+## Deploy script Ploi
+
+```bash
+if [[ {COMMIT_MESSAGE} =~ "[BOT]" ]]; then
+    echo "Automatically committed on production. Nothing to deploy."
+    {DO_NOT_NOTIFY}
+    # Uncomment the following line when using zero downtime deployments.
+    # {CLEAR_NEW_RELEASE}
+    exit 0
+fi
+
+cd {SITE_DIRECTORY}
+git pull origin main
+composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+npm ci
+npm run production
+php{SITE_PHP_VERSION} artisan cache:clear
+php{SITE_PHP_VERSION} artisan config:cache
+php{SITE_PHP_VERSION} artisan route:cache
+php{SITE_PHP_VERSION} artisan statamic:stache:warm
+php{SITE_PHP_VERSION} artisan queue:restart
+php{SITE_PHP_VERSION} artisan statamic:search:update --all
+php{SITE_PHP_VERSION} artisan statamic:static:clear
+php{SITE_PHP_VERSION} artisan statamic:static:warm --queue
+php{SITE_PHP_VERSION} artisan statamic:assets:generate-presets --queue
+
+{RELOAD_PHP_FPM}
+
+echo "🚀 Application deployed!"
+```
+
+## Deploy script Forge
+
+```bash
+if [[ $FORGE_DEPLOY_MESSAGE =~ "[BOT]" ]]; then
+    echo "Automatically committed on production. Nothing to deploy."
+    exit 0
+fi
+
+cd $FORGE_SITE_PATH
+git pull origin main
+$FORGE_COMPOSER install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+npm ci
+npm run production
+$FORGE_PHP artisan cache:clear
+$FORGE_PHP artisan config:cache
+$FORGE_PHP artisan route:cache
+$FORGE_PHP artisan statamic:stache:warm
+$FORGE_PHP artisan queue:restart
+$FORGE_PHP artisan statamic:search:update --all
+$FORGE_PHP artisan statamic:static:clear
+$FORGE_PHP artisan statamic:static:warm --queue
+$FORGE_PHP artisan statamic:assets:generate-presets --queue
+
+( flock -w 10 9 || exit 1
+    echo 'Restarting FPM...'; sudo -S service $FORGE_PHP_FPM reload ) 9>/tmp/fpmlock
+```

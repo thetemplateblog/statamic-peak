@@ -11,6 +11,19 @@ fields:
       validate:
         - required
   -
+    handle: assets_field
+    field:
+      mode: list
+      restrict: false
+      allow_uploads: true
+      show_filename: true
+      display: 'Assets Field'
+      type: assets
+      icon: assets
+      listable: hidden
+      instructions_position: above
+      read_only: false
+  -
     handle: text
     field: common.text_plain
     config:
@@ -23,3 +36,36 @@ fields:
       display: Button
   -
     import: buttons
+  -
+    handle: bard_field
+    field:
+      always_show_set_button: false
+      buttons:
+        - h2
+        - h3
+        - bold
+        - italic
+        - unorderedlist
+        - orderedlist
+        - removeformat
+        - quote
+        - anchor
+        - image
+        - table
+      save_html: false
+      toolbar_mode: fixed
+      link_noopener: false
+      link_noreferrer: false
+      target_blank: false
+      reading_time: false
+      fullscreen: true
+      allow_source: true
+      enable_input_rules: true
+      enable_paste_rules: true
+      antlers: false
+      display: 'Bard Field'
+      type: bard
+      icon: bard
+      listable: hidden
+      instructions_position: above
+      read_only: false
